@@ -331,59 +331,15 @@ function findSourceFiles(nycOptions) {
   return allFiles
 }
 
-function rewritePathPrefix(nycFilename, nycOptions) {
-  if (!nycOptions.rewritePathPrefix) {
-    debug("NYC rewritePathPrefix option is not set, skipping")
-    return
-  }
-
-  const nycCoverage = JSON.parse(readFileSync(nycFilename, 'utf8'))
-  const coverageKeys = Object.keys(nycCoverage)
-  const firstPrefix = nycOptions.rewritePathPrefix[0]
-  const secondPrefix = nycOptions.rewritePathPrefix[1]
-  let changed
-  coverageKeys.forEach((origPath) => {
-    if (origPath.includes(secondPrefix)) {
-      const replacedPathIndex = origPath.indexOf(secondPrefix)
-      const prefixToReplace = origPath.substring(0, replacedPathIndex)
-      const newPath = origPath.replace(prefixToReplace, firstPrefix)
-      if (newPath === origPath) {
-        return
-      }
-      debug('origPath=%s firstPrefix=%s secondPrefix=%s replacedPathIndex=%s prefixToReplace=%s',
-        origPath, firstPrefix, secondPrefix, replacedPathIndex, prefixToReplace)
-      debug(' newPath=%s', newPath)
-      if (nycCoverage[newPath]) {
-        nycCoverage[origPath] = nycCoverage[newPath]
-        delete nycCoverage[newPath]
-        debug("replace %s -> %s", origPath, newPath)
-        changed = true
-        return
-      }
-    }
-  });
-
-  if (changed) {
-    debug('rewritePathPrefix saving updated file %s', nycFilename)
-    debug('there are %d keys in the file', Object.keys(nycCoverage).length)
-
-    writeFileSync(
-      nycFilename,
-      JSON.stringify(nycCoverage, null, 2) + '\n',
-      'utf8'
-    )
-  }
-}
-
 function stripPathPrefix(nycFilename, nycOptions) {
   if (!nycOptions.stripPathPrefix) {
-    debug("NYC stripPathPrefix option is not set, skipping")
+    debug('NYC stripPathPrefix option is not set, skipping')
     return
   }
 
   const nycCoverage = JSON.parse(readFileSync(nycFilename, 'utf8'))
   const coverageKeys = Object.keys(nycCoverage)
-  const prefixPath = nycOptions.prefixPath
+  const prefixPath = nycOptions.stripPathPrefix
   let changed
   coverageKeys.forEach((origPath) => {
     const newPath = origPath.replace(prefixPath, '')
@@ -393,6 +349,7 @@ function stripPathPrefix(nycFilename, nycOptions) {
     if (!nycCoverage[newPath]) {
       nycCoverage[newPath] = nycCoverage[origPath]
       delete nycCoverage[origPath]
+      debug('stripped prefix %s -> %s', origPath, newPath)
       changed = true
     }
   });
@@ -477,6 +434,5 @@ module.exports = {
   tryFindingLocalFiles,
   readNycOptions,
   includeAllFiles,
-  rewritePathPrefix,
   stripPathPrefix
 }
