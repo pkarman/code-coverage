@@ -129,7 +129,7 @@ function showNycInfo(nycFilename) {
     // printing a few found keys and file paths from the coverage file
     // will make debugging any problems much much easier
     if (k < maxPrintKeys) {
-      debug('%d key %s file path %s', k + 1, key, coverage.path)
+      debug('%d key %s file path %s hash %s', k + 1, key, coverage.path, coverage.hash)
     }
   })
 }
@@ -151,6 +151,8 @@ function resolveRelativePaths(nycFilename) {
 
   let changed
 
+  const hashLookup = {};
+
   coverageKeys.forEach((key, k) => {
     const coverage = nycCoverage[key]
 
@@ -171,6 +173,12 @@ function resolveRelativePaths(nycFilename) {
     // path is absolute, let's check if it exists
     if (!existsSync(coverage.path)) {
       debug('⚠️ cannot find file %s with hash %s', coverage.path, coverage.hash)
+    }
+
+    if (!hashLookup[coverage.hash]) {
+      hashLookup[coverage.hash] = coverage.path;
+    } else {
+      debug("found hash collision: %s -> %s", coverage.path, hashLookup[coverage.hash])
     }
   })
 
@@ -322,6 +330,85 @@ function findSourceFiles(nycOptions) {
   const allFiles = globby.sync(patterns, { absolute: true })
   return allFiles
 }
+
+function rewritePathPrefix(nycFilename, nycOptions) {
+  if (!nycOptions.rewritePathPrefix) {
+    debug("NYC rewritePathPrefix option is not set, skipping")
+    return
+  }
+
+  const nycCoverage = JSON.parse(readFileSync(nycFilename, 'utf8'))
+  const coverageKeys = Object.keys(nycCoverage)
+  const firstPrefix = nycOptions.rewritePathPrefix[0]
+  const secondPrefix = nycOptions.rewritePathPrefix[1]
+  let changed
+  coverageKeys.forEach((origPath) => {
+    if (origPath.includes(secondPrefix)) {
+      const replacedPathIndex = origPath.indexOf(secondPrefix)
+      const prefixToReplace = origPath.substring(0, replacedPathIndex)
+      const newPath = origPath.replace(prefixToReplace, firstPrefix)
+      if (newPath === origPath) {
+        return
+      }
+      debug('origPath=%s firstPrefix=%s secondPrefix=%s replacedPathIndex=%s prefixToReplace=%s',
+        origPath, firstPrefix, secondPrefix, replacedPathIndex, prefixToReplace)
+      debug(' newPath=%s', newPath)
+      if (nycCoverage[newPath]) {
+        nycCoverage[origPath] = nycCoverage[newPath]
+        delete nycCoverage[newPath]
+        debug("replace %s -> %s", origPath, newPath)
+        changed = true
+        return
+      }
+    }
+  });
+
+  if (changed) {
+    debug('rewritePathPrefix saving updated file %s', nycFilename)
+    debug('there are %d keys in the file', Object.keys(nycCoverage).length)
+
+    writeFileSync(
+      nycFilename,
+      JSON.stringify(nycCoverage, null, 2) + '\n',
+      'utf8'
+    )
+  }
+}
+
+function stripPathPrefix(nycFilename, nycOptions) {
+  if (!nycOptions.stripPathPrefix) {
+    debug("NYC stripPathPrefix option is not set, skipping")
+    return
+  }
+
+  const nycCoverage = JSON.parse(readFileSync(nycFilename, 'utf8'))
+  const coverageKeys = Object.keys(nycCoverage)
+  const prefixPath = nycOptions.prefixPath
+  let changed
+  coverageKeys.forEach((origPath) => {
+    const newPath = origPath.replace(prefixPath, '')
+    if (newPath === origPath) {
+      return
+    }
+    if (!nycCoverage[newPath]) {
+      nycCoverage[newPath] = nycCoverage[origPath]
+      delete nycCoverage[origPath]
+      changed = true
+    }
+  });
+
+  if (changed) {
+    debug('stripPathPrefix saving updated file %s', nycFilename)
+    debug('there are %d keys in the file', Object.keys(nycCoverage).length)
+
+    writeFileSync(
+      nycFilename,
+      JSON.stringify(nycCoverage, null, 2) + '\n',
+      'utf8'
+    )
+  }
+}
+
 /**
  * If the website or unit tests did not load ALL files we need to
  * include, then we should include the missing files ourselves
@@ -389,5 +476,7 @@ module.exports = {
   checkAllPathsNotFound,
   tryFindingLocalFiles,
   readNycOptions,
-  includeAllFiles
+  includeAllFiles,
+  rewritePathPrefix,
+  stripPathPrefix
 }

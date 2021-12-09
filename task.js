@@ -9,7 +9,9 @@ const {
   checkAllPathsNotFound,
   tryFindingLocalFiles,
   readNycOptions,
-  includeAllFiles
+  includeAllFiles,
+  rewritePathPrefix,
+  stripPathPrefix
 } = require('./task-utils')
 const { fixSourcePaths } = require('./support-utils')
 const { removePlaceholders } = require('./common-utils')
@@ -184,8 +186,11 @@ const tasks = {
     if (allSourceFilesMissing) {
       tryFindingLocalFiles(nycFilename)
     }
+    stripPathPrefix(nycFilename, nycReportOptions)
 
     resolveRelativePaths(nycFilename)
+
+    rewritePathPrefix(nycFilename, nycReportOptions)
 
     if (customNycReportScript) {
       debug(
