@@ -342,7 +342,8 @@ function rewritePathPrefix(nycFilename, nycOptions) {
   const firstPrefix = nycOptions.rewritePathPrefix[0]
   const secondPrefix = nycOptions.rewritePathPrefix[1]
   let changed
-  coverageKeys.forEach((origPath) => {
+  coverageKeys.forEach((key) => {
+    const origPath = nycCoverage[key].path
     if (origPath.includes(secondPrefix)) {
       const replacedPathIndex = origPath.indexOf(secondPrefix)
       const prefixToReplace = origPath.substring(0, replacedPathIndex)
@@ -353,13 +354,9 @@ function rewritePathPrefix(nycFilename, nycOptions) {
       debug('origPath=%s firstPrefix=%s secondPrefix=%s replacedPathIndex=%s prefixToReplace=%s',
         origPath, firstPrefix, secondPrefix, replacedPathIndex, prefixToReplace)
       debug(' newPath=%s', newPath)
-      if (nycCoverage[newPath]) {
-        nycCoverage[origPath] = nycCoverage[newPath]
-        delete nycCoverage[newPath]
-        debug("replace %s -> %s", origPath, newPath)
-        changed = true
-        return
-      }
+      nycCoverage[key].path = newPath
+      debug("replacePathPrefix %s -> %s", origPath, newPath)
+      changed = true
     }
   });
 
@@ -385,16 +382,14 @@ function stripPathPrefix(nycFilename, nycOptions) {
   const coverageKeys = Object.keys(nycCoverage)
   const prefixPath = nycOptions.prefixPath
   let changed
-  coverageKeys.forEach((origPath) => {
+  coverageKeys.forEach((key) => {
+    const origPath = nycCoverage[key].path
     const newPath = origPath.replace(prefixPath, '')
     if (newPath === origPath) {
       return
     }
-    if (!nycCoverage[newPath]) {
-      nycCoverage[newPath] = nycCoverage[origPath]
-      delete nycCoverage[origPath]
-      changed = true
-    }
+    nycCoverage[key].path = newPath
+    changed = true
   });
 
   if (changed) {
