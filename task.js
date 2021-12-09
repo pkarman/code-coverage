@@ -10,6 +10,7 @@ const {
   tryFindingLocalFiles,
   readNycOptions,
   includeAllFiles,
+  rewritePathPrefix,
   stripPathPrefix
 } = require('./task-utils')
 const { fixSourcePaths } = require('./support-utils')
@@ -188,6 +189,8 @@ const tasks = {
     stripPathPrefix(nycFilename, nycReportOptions)
 
     resolveRelativePaths(nycFilename)
+
+    rewritePathPrefix(nycFilename, nycReportOptions)
 
     if (customNycReportScript) {
       debug(
