@@ -353,8 +353,8 @@ function rewritePathPrefix(nycFilename, nycOptions) {
       if (newPath === origPath) {
         return
       }
-      debug('origPath=%s firstPrefix=%s secondPrefix=%s replacedPathIndex=%s prefixToReplace=%s',
-        origPath, firstPrefix, secondPrefix, replacedPathIndex, prefixToReplace)
+      debug('key=%s origPath=%s firstPrefix=%s secondPrefix=%s replacedPathIndex=%s prefixToReplace=%s',
+        key, origPath, firstPrefix, secondPrefix, replacedPathIndex, prefixToReplace)
       debug(' newPath=%s', newPath)
       // if we find a "duplicate" entry, de-dupe and prefer the newPath coverage value
       if (nycCoverage[newPath]) {
@@ -396,7 +396,10 @@ function stripPathPrefix(nycFilename, nycOptions) {
     if (newPath === origPath) {
       return
     }
-    nycCoverage[key].path = newPath
+    const coverage = nycCoverage[key]
+    coverage.path = newPath
+    nycCoverage[newPath] = coverage
+    delete nycCoverage[key]
     changed = true
   });
 
