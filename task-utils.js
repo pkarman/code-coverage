@@ -345,6 +345,10 @@ function rewritePathPrefix(nycFilename, nycOptions) {
   const secondPrefix = nycOptions.rewritePathPrefix[1]
   let changed
   coverageKeys.forEach((key) => {
+    if (!nycCoverage[key]) {
+      debug('warning: missing coverage for %s', key)
+      return
+    }
     const origPath = nycCoverage[key].path
     if (origPath.includes(secondPrefix)) {
       const replacedPathIndex = origPath.indexOf(secondPrefix)
